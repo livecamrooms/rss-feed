@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Live Cams</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #111;
+      color: #fff;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 15px;
+    }
+
+    .card {
+      background: #1c1c1c;
+      padding: 10px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    img {
+      width: 100%;
+      border-radius: 8px;
+    }
+
+    a {
+      color: #0af;
+      text-decoration: none;
+      font-weight: bold;
+      display: block;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>🔴 Live Now</h1>
+<div class="grid" id="grid"></div>
+
+<script>
+fetch("feed.json")
+  .then(res => res.json())
+  .then(data => {
+    const grid = document.getElementById("grid");
+
+    data.forEach(item => {
+      const card = document.createElement("div");
+      card.className = "card";
+
+      card.innerHTML = `
+        <img src="${item.image}">
+        <a href="${item.link}" target="_blank">${item.title}</a>
+      `;
+
+      grid.appendChild(card);
+    });
+  });
+</script>
+
+</body>
+</html>
