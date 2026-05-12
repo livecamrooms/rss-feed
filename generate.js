@@ -18,8 +18,8 @@ function extractModels(html) {
   const models = [];
   const seen = new Set();
 
-  // Match Markdown-style links: [Name](performer.php?model_id=XXXX)
-  const regex = /\[([^\]]+)\]\((performer\.php\?model_id=\d+)\)/gi;
+  // Stronger regex - only real performer links (ignores banners better)
+  const regex = /\[([A-Za-z0-9_]+)\]\((performer\.php\?model_id=\d+)\)/g;
 
   let match;
   while ((match = regex.exec(html)) !== null) {
@@ -31,7 +31,7 @@ function extractModels(html) {
 
     const fullLink = `https://www.lbfmcams.com/${linkPath}`;
 
-    // Common thumbnail pattern used by the site
+    // Thumbnail URL pattern used by the site
     const image = `https://www.lbfmcams.com/shared/camthumb/${name.toLowerCase()}.jpg`;
 
     models.push({
@@ -46,20 +46,16 @@ function extractModels(html) {
 
 async function main() {
   try {
-    console.log("🔄 Fetching live models...");
+    console.log("🔄 Fetching live models from LBFM...");
     const html = await fetchHTML();
     const models = extractModels(html);
 
     console.log(`✅ Found ${models.length} live models`);
 
-    if (models.length === 0) {
-      console.warn("⚠️ No models found. Site structure may have changed again.");
-    }
-
     fs.writeFileSync(DATA_FILE, JSON.stringify(models, null, 2));
     fs.writeFileSync(FEED_FILE, JSON.stringify(models, null, 2));
 
-    console.log("✅ feed.json & data.json updated successfully!");
+    console.log("✅ Successfully updated feed.json & data.json");
   } catch (err) {
     console.error("❌ Error:", err.message);
     process.exit(1);
