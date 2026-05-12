@@ -1,72 +1,132 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Live Cams</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🔴 Live Cams - LBFM</title>
   <style>
+    :root { --bg: #0a0a0a; --card: #1a1a1a; --accent: #ff2d55; }
+    * { margin:0; padding:0; box-sizing:border-box; }
     body {
-      font-family: Arial;
-      background: #111;
-      color: #fff;
-      margin: 0;
-      padding: 20px;
+      font-family: system-ui, sans-serif;
+      background: var(--bg);
+      color: #eee;
     }
-
-    h1 {
-      text-align: center;
+    header {
+      text-align:center;
+      padding: 30px 20px;
+      background: linear-gradient(135deg, #1f1f1f, #111);
+      border-bottom: 4px solid var(--accent);
     }
+    h1 { font-size: 2.8rem; }
+    .subtitle { color: #aaa; }
 
+    .container { max-width: 1480px; margin: 30px auto; padding: 0 20px; }
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 15px;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 22px;
     }
-
     .card {
-      background: #1c1c1c;
-      padding: 10px;
-      border-radius: 10px;
-      text-align: center;
+      background: var(--card);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: all 0.3s;
     }
-
-    img {
+    .card:hover { transform: translateY(-10px); box-shadow: 0 15px 35px rgba(255,45,85,0.25); }
+    .card img {
       width: 100%;
-      border-radius: 8px;
+      height: 300px;
+      object-fit: cover;
+      background: #000;
     }
-
-    a {
-      color: #0af;
-      text-decoration: none;
+    .info { padding: 16px; text-align: center; }
+    .live { 
+      display: inline-block; 
+      background: #ff2d55; 
+      color: white; 
+      padding: 4px 12px; 
+      border-radius: 9999px; 
+      font-size: 0.85rem; 
       font-weight: bold;
-      display: block;
-      margin-top: 5px;
+      margin-bottom: 10px;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 50% { opacity: 0.6; } }
+    .name { font-size: 1.3rem; margin: 8px 0; }
+    .watch-btn {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 10px 24px;
+      background: var(--accent);
+      color: white;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .watch-btn:hover { background: #ff5975; }
+    .empty, .error {
+      text-align: center;
+      padding: 80px 20px;
+      color: #777;
+      font-size: 1.3rem;
     }
   </style>
 </head>
 <body>
+  <header>
+    <h1>🔴 Live Now on LBFM</h1>
+    <p class="subtitle">Real-time performers • Auto-updates every 3 minutes</p>
+  </header>
 
-<h1>🔴 Live Now</h1>
-<div class="grid" id="grid"></div>
+  <div class="container">
+    <div class="grid" id="grid"></div>
+  </div>
 
-<script>
-fetch("feed.json")
-  .then(res => res.json())
-  .then(data => {
-    const grid = document.getElementById("grid");
+  <script>
+    async function loadCams() {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '<div class="empty">Loading live models...</div>';
 
-    data.forEach(item => {
-      const card = document.createElement("div");
-      card.className = "card";
+      try {
+        // Try feed.json first
+        let res = await fetch('feed.json?' + Date.now()); // cache bust
+        if (!res.ok) res = await fetch('data.json?' + Date.now());
 
-      card.innerHTML = `
-        <img src="${item.image}">
-        <a href="${item.link}" target="_blank">${item.title}</a>
-      `;
+        const models = await res.json();
 
-      grid.appendChild(card);
-    });
-  });
-</script>
+        if (!models || models.length === 0) {
+          grid.innerHTML = `<div class="empty">No models online right now 😔<br><small>Check back soon</small></div>`;
+          return;
+        }
 
+        grid.innerHTML = '';
+
+        models.forEach(m => {
+          if (!m.title || m.title.length < 3) return;
+
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `
+            <img src="${m.image}" alt="${m.title}" 
+                 onerror="this.src='https://via.placeholder.com/300x300/1a1a1a/888?text=${encodeURIComponent(m.title)}'">
+            <div class="info">
+              <div class="live">● LIVE</div>
+              <div class="name">${m.title}</div>
+              <a href="${m.link}" target="_blank" class="watch-btn">Watch Live</a>
+            </div>
+          `;
+          grid.appendChild(card);
+        });
+
+      } catch (err) {
+        console.error(err);
+        grid.innerHTML = `<div class="error">Failed to load feed.<br>Please refresh the page.</div>`;
+      }
+    }
+
+    loadCams();
+    setInterval(loadCams, 180000); // every 3 minutes
+  </script>
 </body>
 </html>
