@@ -10,7 +10,7 @@ async function fetchHTML() {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
     }
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
   return await res.text();
 }
 
@@ -18,28 +18,26 @@ function extractModels(html) {
   const models = [];
   const seen = new Set();
 
-  // Improved regex for current site structure
-  const regex = /<a[^>]*href="(performer\.php\?model_id=\d+)"[^>]*>([\w\s\d]+?)</a>/gi;
+  // Match Markdown-style links: [Name](performer.php?model_id=XXXX)
+  const regex = /\[([^\]]+)\]\((performer\.php\?model_id=\d+)\)/gi;
 
   let match;
   while ((match = regex.exec(html)) !== null) {
-    const linkPath = match[1];
-    let name = match[2].trim();
+    const name = match[1].trim();
+    const linkPath = match[2];
 
     if (!name || name.length < 3 || seen.has(name)) continue;
     seen.add(name);
 
-    const fullLink = linkPath.startsWith("http") 
-      ? linkPath 
-      : `https://www.lbfmcams.com/${linkPath}`;
+    const fullLink = `https://www.lbfmcams.com/${linkPath}`;
 
-    // Try common thumbnail pattern
-    const thumb = `https://www.lbfmcams.com/shared/camthumb/${name.toLowerCase()}.jpg`;
+    // Common thumbnail pattern used by the site
+    const image = `https://www.lbfmcams.com/shared/camthumb/${name.toLowerCase()}.jpg`;
 
     models.push({
       title: name,
       link: fullLink,
-      image: thumb
+      image: image
     });
   }
 
@@ -48,16 +46,20 @@ function extractModels(html) {
 
 async function main() {
   try {
-    console.log("Fetching live models from LBFM...");
+    console.log("🔄 Fetching live models...");
     const html = await fetchHTML();
     const models = extractModels(html);
 
     console.log(`✅ Found ${models.length} live models`);
 
+    if (models.length === 0) {
+      console.warn("⚠️ No models found. Site structure may have changed again.");
+    }
+
     fs.writeFileSync(DATA_FILE, JSON.stringify(models, null, 2));
     fs.writeFileSync(FEED_FILE, JSON.stringify(models, null, 2));
 
-    console.log("✅ feed.json and data.json updated successfully");
+    console.log("✅ feed.json & data.json updated successfully!");
   } catch (err) {
     console.error("❌ Error:", err.message);
     process.exit(1);
