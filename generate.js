@@ -18,21 +18,18 @@ function extractModels(html) {
   const models = [];
   const seen = new Set();
 
-  // Match real performer links: [Name](performer.php?model_id=XXXX)
-  const regex = /\[([A-Za-z0-9_]+)\]\((performer\.php\?model_id=\d+)\)/g;
+  // Strong regex for Markdown links: [Name](performer.php?model_id=XXXX)
+  const regex = /\[([A-Za-z0-9_]+)\]\(https?:\/\/www\.lbfmcams\.com\/performer\.php\?model_id=\d+\)/g;
 
   let match;
   while ((match = regex.exec(html)) !== null) {
     const name = match[1].trim();
-    const linkPath = match[2];
 
-    // Skip obvious non-models
-    if (!name || name.length < 3 || seen.has(name) || 
-        name.includes("Banner") || name === "Chat Now") continue;
-
+    if (!name || name.length < 3 || seen.has(name)) continue;
     seen.add(name);
 
-    const fullLink = `https://www.lbfmcams.com/${linkPath}`;
+    const fullLink = `https://www.lbfmcams.com/performer.php?model_id=${match[0].match(/model_id=(\d+)/)[1]}`;
+
     const image = `https://www.lbfmcams.com/shared/camthumb/${name.toLowerCase()}.jpg`;
 
     models.push({
@@ -52,10 +49,6 @@ async function main() {
     const models = extractModels(html);
 
     console.log(`✅ Found ${models.length} live models`);
-
-    if (models.length === 0) {
-      console.warn("⚠️ No models found - site structure may have changed.");
-    }
 
     fs.writeFileSync(DATA_FILE, JSON.stringify(models, null, 2));
     fs.writeFileSync(FEED_FILE, JSON.stringify(models, null, 2));
