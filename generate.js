@@ -18,7 +18,7 @@ function extractModels(html) {
   const models = [];
   const seen = new Set();
 
-  // Stronger regex - only real performer links (ignores banners better)
+  // Match real performer links: [Name](performer.php?model_id=XXXX)
   const regex = /\[([A-Za-z0-9_]+)\]\((performer\.php\?model_id=\d+)\)/g;
 
   let match;
@@ -26,12 +26,13 @@ function extractModels(html) {
     const name = match[1].trim();
     const linkPath = match[2];
 
-    if (!name || name.length < 3 || seen.has(name)) continue;
+    // Skip obvious non-models
+    if (!name || name.length < 3 || seen.has(name) || 
+        name.includes("Banner") || name === "Chat Now") continue;
+
     seen.add(name);
 
     const fullLink = `https://www.lbfmcams.com/${linkPath}`;
-
-    // Thumbnail URL pattern used by the site
     const image = `https://www.lbfmcams.com/shared/camthumb/${name.toLowerCase()}.jpg`;
 
     models.push({
@@ -52,10 +53,14 @@ async function main() {
 
     console.log(`✅ Found ${models.length} live models`);
 
+    if (models.length === 0) {
+      console.warn("⚠️ No models found - site structure may have changed.");
+    }
+
     fs.writeFileSync(DATA_FILE, JSON.stringify(models, null, 2));
     fs.writeFileSync(FEED_FILE, JSON.stringify(models, null, 2));
 
-    console.log("✅ Successfully updated feed.json & data.json");
+    console.log("✅ feed.json & data.json updated successfully!");
   } catch (err) {
     console.error("❌ Error:", err.message);
     process.exit(1);
