@@ -2,49 +2,66 @@ const fs = require("fs");
 
 const BASE_URL = "https://www.lbfmcams.com/onnow.php?wid=104247&cid=100&rid=1";
 const DATA_FILE = "data.json";
+const FEED_FILE = "feed.json";
 
 async function fetchHTML() {
   const res = await fetch(BASE_URL, {
-    headers: { 
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
     }
   });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return await res.text();
 }
 
 function extractModels(html) {
-  const items = [];
+  const models = [];
   const seen = new Set();
 
-  // Better pattern for performer links + images
-  const performerRegex = /<a[^>]+href="(performer\.php\?model_id=\d+)"[^>]*>[\s\S]*?([\w\s]+?)(?:<\/a>|\s*<br>)/gi;
-  const imgRegex = /<img[^>]+src="([^"]+)"[^>]*>/gi;
+  // Improved regex for current site structure
+  const regex = /<a[^>]*href="(performer\.php\?model_id=\d+)"[^>]*>([\w\s\d]+?)</a>/gi;
 
   let match;
-  while ((match = performerRegex.exec(html)) !== null) {
-    let link = match[1];
-    const name = match[2].trim();
+  while ((match = regex.exec(html)) !== null) {
+    const linkPath = match[1];
+    let name = match[2].trim();
 
-    if (!name || name.length < 3 || seen.has(link)) continue;
-    seen.add(link);
+    if (!name || name.length < 3 || seen.has(name)) continue;
+    seen.add(name);
 
-    if (!link.startsWith("http")) {
-      link = "https://www.lbfmcams.com/" + link;
-    }
+    const fullLink = linkPath.startsWith("http") 
+      ? linkPath 
+      : `https://www.lbfmcams.com/${linkPath}`;
 
-    // Try to find nearby image (thumbnails are usually near the link)
-    const imgMatch = html.slice(Math.max(0, match.index - 500), match.index + 800).match(imgRegex);
-    let image = imgMatch && imgMatch[0] ? imgMatch[0].match(/src="([^"]+)"/)[1] : 
-                "https://www.lbfmcams.com/shared/images/default.jpg";
+    // Try common thumbnail pattern
+    const thumb = `https://www.lbfmcams.com/shared/camthumb/${name.toLowerCase()}.jpg`;
 
-    if (!image.startsWith("http")) {
-      image = "https://www.lbfmcams.com/" + image;
-    }
-
-    items.push({ title: name, link, image });
+    models.push({
+      title: name,
+      link: fullLink,
+      image: thumb
+    });
   }
 
-  return items;
+  return models;
 }
 
-// ... rest of the file stays mostly the same (loadPrevious, getNewItems, buildRSS, main)
+async function main() {
+  try {
+    console.log("Fetching live models from LBFM...");
+    const html = await fetchHTML();
+    const models = extractModels(html);
+
+    console.log(`✅ Found ${models.length} live models`);
+
+    fs.writeFileSync(DATA_FILE, JSON.stringify(models, null, 2));
+    fs.writeFileSync(FEED_FILE, JSON.stringify(models, null, 2));
+
+    console.log("✅ feed.json and data.json updated successfully");
+  } catch (err) {
+    console.error("❌ Error:", err.message);
+    process.exit(1);
+  }
+}
+
+main();
