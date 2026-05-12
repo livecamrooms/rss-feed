@@ -5,55 +5,96 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🔴 Live Cams - LBFM</title>
   <style>
-    :root { --bg: #0a0a0a; --card: #1a1a1a; --accent: #ff2d55; }
-    * { margin:0; padding:0; box-sizing:border-box; }
+    :root {
+      --bg: #0a0a0a;
+      --card: #1a1a1a;
+      --accent: #ff2d55;
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
     body {
-      font-family: system-ui, sans-serif;
+      font-family: system-ui, -apple-system, sans-serif;
       background: var(--bg);
       color: #eee;
     }
+
     header {
-      text-align:center;
+      text-align: center;
       padding: 30px 20px;
       background: linear-gradient(135deg, #1f1f1f, #111);
       border-bottom: 4px solid var(--accent);
     }
-    h1 { font-size: 2.8rem; }
-    .subtitle { color: #aaa; }
 
-    .container { max-width: 1480px; margin: 30px auto; padding: 0 20px; }
+    h1 { font-size: 2.8rem; margin-bottom: 8px; }
+    .subtitle { color: #aaa; font-size: 1.1rem; }
+
+    .counter {
+      margin-top: 15px;
+      font-size: 1.4rem;
+      color: var(--accent);
+      font-weight: bold;
+    }
+
+    .container {
+      max-width: 1480px;
+      margin: 30px auto;
+      padding: 0 20px;
+    }
+
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
       gap: 22px;
     }
+
     .card {
       background: var(--card);
       border-radius: 12px;
       overflow: hidden;
-      transition: all 0.3s;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
     }
-    .card:hover { transform: translateY(-10px); box-shadow: 0 15px 35px rgba(255,45,85,0.25); }
+
+    .card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 15px 35px rgba(255,45,85,0.3);
+    }
+
     .card img {
       width: 100%;
       height: 300px;
       object-fit: cover;
       background: #000;
     }
-    .info { padding: 16px; text-align: center; }
-    .live { 
-      display: inline-block; 
-      background: #ff2d55; 
-      color: white; 
-      padding: 4px 12px; 
-      border-radius: 9999px; 
-      font-size: 0.85rem; 
+
+    .info {
+      padding: 16px;
+      text-align: center;
+    }
+
+    .live {
+      display: inline-block;
+      background: #ff2d55;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 0.85rem;
       font-weight: bold;
       margin-bottom: 10px;
       animation: pulse 2s infinite;
     }
-    @keyframes pulse { 50% { opacity: 0.6; } }
-    .name { font-size: 1.3rem; margin: 8px 0; }
+
+    @keyframes pulse {
+      50% { opacity: 0.6; }
+    }
+
+    .name {
+      font-size: 1.3rem;
+      margin: 8px 0;
+      font-weight: 600;
+    }
+
     .watch-btn {
       display: inline-block;
       margin-top: 8px;
@@ -64,7 +105,12 @@
       text-decoration: none;
       font-weight: 600;
     }
-    .watch-btn:hover { background: #ff5975; }
+
+    .watch-btn:hover {
+      background: #ff5975;
+      transform: scale(1.05);
+    }
+
     .empty, .error {
       text-align: center;
       padding: 80px 20px;
@@ -75,8 +121,9 @@
 </head>
 <body>
   <header>
-    <h1>🔴 Live Now on LBFM</h1>
-    <p class="subtitle">Real-time performers • Auto-updates every 3 minutes</p>
+    <h1>🔴 Live Cams</h1>
+    <p class="subtitle">LBFM • Real performers right now</p>
+    <div class="counter" id="counter">Loading models...</div>
   </header>
 
   <div class="container">
@@ -86,16 +133,21 @@
   <script>
     async function loadCams() {
       const grid = document.getElementById('grid');
+      const counterEl = document.getElementById('counter');
+
       grid.innerHTML = '<div class="empty">Loading live models...</div>';
 
       try {
-        // Try feed.json first
-        let res = await fetch('feed.json?' + Date.now()); // cache bust
-        if (!res.ok) res = await fetch('data.json?' + Date.now());
+        // Cache bust to always get fresh data
+        let res = await fetch(`feed.json?v=${Date.now()}`);
+        if (!res.ok) res = await fetch(`data.json?v=${Date.now()}`);
 
         const models = await res.json();
 
-        if (!models || models.length === 0) {
+        const count = models ? models.length : 0;
+        counterEl.textContent = `${count} Models Online Now`;
+
+        if (count === 0) {
           grid.innerHTML = `<div class="empty">No models online right now 😔<br><small>Check back soon</small></div>`;
           return;
         }
@@ -121,12 +173,16 @@
 
       } catch (err) {
         console.error(err);
+        counterEl.textContent = "Failed to load count";
         grid.innerHTML = `<div class="error">Failed to load feed.<br>Please refresh the page.</div>`;
       }
     }
 
+    // Initial load
     loadCams();
-    setInterval(loadCams, 180000); // every 3 minutes
+
+    // Auto refresh every 3 minutes
+    setInterval(loadCams, 180000);
   </script>
 </body>
 </html>
